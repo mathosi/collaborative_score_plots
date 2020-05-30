@@ -3,22 +3,28 @@ library(rdrop2)
 
 # variablese to modify ----------------------------------------------------
 
+#csv with embeddings inside the same directory as server.R and ui.R
 embeddings_csv <- 'embeddings_example.csv'
-dropbox_path <- 'Regensburg/cell_selection'
+#folder within the dropbox folder, where the selections are stored as textfiles
+dropbox_path <- 'cell_selection'
 
 
 # Running instructions ----------------------------------------------------
 
 #instruction: put embeddings.csv into collaborative_score_plots/
+#csv must contain 4 columns:
+  # -column 1: x coordinates
+  # -column 2: y coordinates
+  # -column 3: unique barcode for each point (cell)
+  # -column 4: variable used for colouring
 #start shiny locally:
 #library(shiny)
 #setwd('/path/to/collaborative_score_plots/')
 #runApp()
 
-#deploy the shinyapp so that collaborators can use it:
-#rsconnect::deployApp()
+#deploy the shinyapp so that collaborators can use it (using shinyapps.io):
 #https://www.shinyapps.io/admin/#/dashboard
-
+#rsconnect::deployApp()
 
 # main functions ----------------------------------------------------------
 
@@ -46,17 +52,18 @@ server <- function(input, output, session, dropboxPath = dropbox_path, embedding
   #myCols <- mapSampleNames(returnCols = T)
   
   output$plot <- renderPlotly({
-    p <- ggplot(dr_df, aes(x=UMAP1, y=UMAP2, key = Barcode)) +
-      geom_point(aes(colour=Tissue), size=0.7) +
+    p <- ggplot(dr_df, aes_string(x=names(dr_df)[1], y=names(dr_df)[2], key = names(dr_df)[3], colour=names(dr_df)[4])) +
+      geom_point(size=0.7) +
       #scale_colour_manual(values = myCols) +
-      coord_fixed() +
+      coord_fixed() + 
+      theme_minimal() +
       guides(colour = guide_legend(override.aes = list(size=5)))
     ggplotly(p, tooltip = '') %>% layout(dragmode = "lasso")
   })
   
   output$click <- renderPrint({
     d <- event_data("plotly_click")
-    if (!is.null(d)) dr_df[dr_df$cells == d$key, ]
+    if (!is.null(d)) dr_df[dr_df[, 3] == d$key, ]
   })
   
   dd <-  renderPrint({
